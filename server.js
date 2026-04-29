@@ -14,8 +14,12 @@ const MAX_REDIRECTS = 8;
 const REQUEST_TIMEOUT_MS = 7000;
 const BROWSER_TIMEOUT_MS = Number(process.env.BROWSER_TIMEOUT_MS || 18000);
 const BROWSER_STABLE_NO_COORD_MS = Number(process.env.BROWSER_STABLE_NO_COORD_MS || 10000);
+const WORKER_CONCURRENCY = Math.max(1, Number(process.env.WORKER_CONCURRENCY || 1));
+const WORKER_QUEUE_LIMIT = Math.max(0, Number(process.env.WORKER_QUEUE_LIMIT || 6));
 const GEOCODE_LIMIT = 5;
 const ADDRESS_BROWSER_MODES = new Set(["auto", "browser", "auto-headed", "headed"]);
+const workerQueue = [];
+let activeWorkerJobs = 0;
 
 const MIME_TYPES = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -117,6 +121,34 @@ function safeResolveLocation(currentUrl, location) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function runQueuedWorker(task) {
+  return new Promise((resolve, reject) => {
+    if (activeWorkerJobs >= WORKER_CONCURRENCY && workerQueue.length >= WORKER_QUEUE_LIMIT) {
+      reject(new Error("系统繁忙，请稍后再试"));
+      return;
+    }
+
+    const run = async () => {
+      activeWorkerJobs += 1;
+      try {
+        resolve(await task());
+      } catch (error) {
+        reject(error);
+      } finally {
+        activeWorkerJobs -= 1;
+        const next = workerQueue.shift();
+        if (next) next();
+      }
+    };
+
+    if (activeWorkerJobs < WORKER_CONCURRENCY) {
+      run();
+    } else {
+      workerQueue.push(run);
+    }
+  });
 }
 
 function hasExtractableGoogleCoords(rawUrl) {
@@ -547,7 +579,7 @@ function collectAllowedBrowserUrl(rawUrl, result) {
   return result;
 }
 
-async function expandGoogleMapsUrlWithBrowser(rawUrl, launchMode = "headless") {
+async function expandGoogleMapsUrlWithBrowserDirect(rawUrl, launchMode = "headless") {
   const start = new URL(rawUrl);
   if (!["http:", "https:"].includes(start.protocol)) {
     throw new Error("只支持 http/https 链接");
@@ -672,6 +704,10 @@ async function expandGoogleMapsUrlWithBrowser(rawUrl, launchMode = "headless") {
     if (chrome.exitCode === null) chrome.kill("SIGKILL");
     fs.rm(userDataDir, { recursive: true, force: true }, () => {});
   }
+}
+
+async function expandGoogleMapsUrlWithBrowser(rawUrl, launchMode = "headless") {
+  return runQueuedWorker(() => expandGoogleMapsUrlWithBrowserDirect(rawUrl, launchMode));
 }
 
 async function expandGoogleMapsUrlAuto(rawUrl, mode) {
