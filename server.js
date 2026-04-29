@@ -16,9 +16,16 @@ const BROWSER_TIMEOUT_MS = Number(process.env.BROWSER_TIMEOUT_MS || 18000);
 const BROWSER_STABLE_NO_COORD_MS = Number(process.env.BROWSER_STABLE_NO_COORD_MS || 10000);
 const WORKER_CONCURRENCY = Math.max(1, Number(process.env.WORKER_CONCURRENCY || 1));
 const WORKER_QUEUE_LIMIT = Math.max(0, Number(process.env.WORKER_QUEUE_LIMIT || 6));
+const CACHE_TTL_MS = Math.max(0, Number(process.env.CACHE_TTL_MS || 7 * 24 * 60 * 60 * 1000));
+const CACHE_MAX_ITEMS = Math.max(0, Number(process.env.CACHE_MAX_ITEMS || 500));
+const RATE_LIMIT_WINDOW_MS = Math.max(1000, Number(process.env.RATE_LIMIT_WINDOW_MS || 60 * 1000));
+const RATE_LIMIT_MAX = Math.max(0, Number(process.env.RATE_LIMIT_MAX || 30));
 const GEOCODE_LIMIT = 5;
 const ADDRESS_BROWSER_MODES = new Set(["auto", "browser", "auto-headed", "headed"]);
 const workerQueue = [];
+const resultCache = new Map();
+const inFlightTasks = new Map();
+const rateLimitBuckets = new Map();
 let activeWorkerJobs = 0;
 
 const MIME_TYPES = new Map([
@@ -121,6 +128,128 @@ function safeResolveLocation(currentUrl, location) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getClientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return forwarded[0] || req.socket.remoteAddress || "unknown";
+}
+
+function checkRateLimit(req) {
+  if (!RATE_LIMIT_MAX) return null;
+
+  const now = Date.now();
+  const ip = getClientIp(req);
+  let bucket = rateLimitBuckets.get(ip);
+  if (!bucket || now >= bucket.resetAt) {
+    bucket = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+    rateLimitBuckets.set(ip, bucket);
+  }
+
+  bucket.count += 1;
+  if (rateLimitBuckets.size > 1000) {
+    for (const [key, value] of rateLimitBuckets) {
+      if (now >= value.resetAt) rateLimitBuckets.delete(key);
+    }
+  }
+
+  if (bucket.count <= RATE_LIMIT_MAX) return null;
+  return {
+    retryAfter: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))
+  };
+}
+
+function enforceRateLimit(req, res) {
+  const limited = checkRateLimit(req);
+  if (!limited) return true;
+
+  res.setHeader("retry-after", String(limited.retryAfter));
+  sendJson(res, 429, {
+    ok: false,
+    error: `请求太频繁，请 ${limited.retryAfter} 秒后再试`
+  });
+  return false;
+}
+
+function trimCache() {
+  while (CACHE_MAX_ITEMS && resultCache.size > CACHE_MAX_ITEMS) {
+    const oldest = resultCache.keys().next().value;
+    resultCache.delete(oldest);
+  }
+}
+
+function getCachedResult(key) {
+  if (!CACHE_TTL_MS || !CACHE_MAX_ITEMS) return null;
+
+  const entry = resultCache.get(key);
+  if (!entry) return null;
+  if (Date.now() >= entry.expiresAt) {
+    resultCache.delete(key);
+    return null;
+  }
+
+  resultCache.delete(key);
+  resultCache.set(key, entry);
+  return {
+    ...entry.value,
+    cached: true
+  };
+}
+
+function setCachedResult(key, value) {
+  if (!CACHE_TTL_MS || !CACHE_MAX_ITEMS) return;
+
+  resultCache.set(key, {
+    expiresAt: Date.now() + CACHE_TTL_MS,
+    value
+  });
+  trimCache();
+}
+
+async function runCachedTask(key, task) {
+  const cached = getCachedResult(key);
+  if (cached) return cached;
+
+  if (inFlightTasks.has(key)) {
+    const value = await inFlightTasks.get(key);
+    return {
+      ...value,
+      shared: true
+    };
+  }
+
+  const promise = task()
+    .then((value) => {
+      setCachedResult(key, value);
+      return value;
+    })
+    .finally(() => {
+      inFlightTasks.delete(key);
+    });
+
+  inFlightTasks.set(key, promise);
+  return promise;
+}
+
+function buildExpandCacheKey(rawUrl, mode) {
+  try {
+    const url = new URL(rawUrl);
+    url.hash = "";
+    return `expand:${mode}:${url.href}`;
+  } catch {
+    return `expand:${mode}:${Converter.normalizeText(rawUrl)}`;
+  }
+}
+
+function buildGeocodeCacheKey(query, mode) {
+  const normalized = Converter.normalizeText(query)
+    .normalize("NFKC")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+  return `geocode:${mode}:${normalized}`;
 }
 
 function runQueuedWorker(task) {
@@ -533,7 +662,7 @@ async function expandGoogleMapsUrl(rawUrl) {
     throw new Error("只支持 http/https 链接");
   }
   if (!isAllowedGoogleMapsHost(start.hostname) || !isProbablyMapsUrl(start)) {
-    throw new Error("只允许展开 Google Maps 链接");
+    throw new Error("只支持指定地图链接");
   }
 
   let current = start;
@@ -546,7 +675,7 @@ async function expandGoogleMapsUrl(rawUrl) {
       const next = safeResolveLocation(current, location);
       if (!next) throw new Error("重定向地址无效");
       if (!["http:", "https:"].includes(next.protocol) || !isAllowedGoogleMapsHost(next.hostname)) {
-        throw new Error("重定向目标不在 Google Maps 白名单内");
+        throw new Error("重定向目标不在允许范围内");
       }
       current = next;
       hops.push(current.href);
@@ -585,7 +714,7 @@ async function expandGoogleMapsUrlWithBrowserDirect(rawUrl, launchMode = "headle
     throw new Error("只支持 http/https 链接");
   }
   if (!isAllowedGoogleMapsHost(start.hostname) || !isProbablyMapsUrl(start)) {
-    throw new Error("只允许浏览器解析 Google Maps 链接");
+    throw new Error("只支持解析指定地图链接");
   }
 
   const executable = findChromiumExecutable();
@@ -688,7 +817,7 @@ async function expandGoogleMapsUrlWithBrowserDirect(rawUrl, launchMode = "headle
     const uniqueUrls = uniqueStrings(best.urls);
     const expandedUrl = best.coordUrl || uniqueUrls[uniqueUrls.length - 1] || "";
     if (!expandedUrl) {
-      throw new Error("Chromium 没有解析出 Google Maps 目标链接");
+      throw new Error("没有解析出目标链接");
     }
 
     return {
@@ -762,16 +891,16 @@ async function geocodeJapaneseAddressWithGoogleBrowser(query, mode = "auto") {
   const browserResult = await expandGoogleMapsUrlWithBrowser(searchUrl.href, launchMode);
   const parsed = Converter.parseGoogleMapsUrl(browserResult.expandedUrl);
   if (!parsed?.coords) {
-    throw new Error("Google Maps 搜索结果里没有可提取坐标");
+    throw new Error("地址结果里没有可提取坐标");
   }
 
   const subAddressTokens = Converter.extractSubAddressTokens(query);
   const precisionNotice = subAddressTokens.length
-    ? `已用 Google Maps 搜索完整地址并取得坐标；输入里包含 ${subAddressTokens.join("、")}，打开高德后请确认楼栋/楼层位置。`
+    ? `已解析完整地址并取得坐标；输入里包含 ${subAddressTokens.join("、")}，打开高德后请确认楼栋/楼层位置。`
     : "";
 
   return {
-    providerOrder: ["google-browser"],
+    providerOrder: ["address-resolver"],
     queries: [Converter.normalizeText(query)],
     sourceGoogleUrl: browserResult.expandedUrl,
     browserFinalUrl: browserResult.browserFinalUrl,
@@ -780,11 +909,11 @@ async function geocodeJapaneseAddressWithGoogleBrowser(query, mode = "auto") {
     launchMode,
     precisionNotice,
     results: [{
-      id: `google-browser-${parsed.coords.lat},${parsed.coords.lng}`,
+      id: `address-resolver-${parsed.coords.lat},${parsed.coords.lng}`,
       name: parsed.label || query,
       displayName: parsed.label || query,
-      type: launchMode === "headed" ? "Google Maps 可见浏览器" : "Google Maps 后台浏览器",
-      provider: "google-browser",
+      type: "地址解析服务",
+      provider: "address-resolver",
       importance: 1,
       coords: parsed.coords,
       sourceGoogleUrl: browserResult.expandedUrl,
@@ -839,6 +968,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 405, { ok: false, error: "Method not allowed" });
         return;
       }
+      if (!enforceRateLimit(req, res)) return;
 
       const target = requestUrl.searchParams.get("url");
       if (!target) {
@@ -852,7 +982,8 @@ const server = http.createServer(async (req, res) => {
           sendJson(res, 400, { ok: false, error: "mode 只支持 redirect/browser/headed/auto/auto-headed" });
           return;
         }
-        const result = await expandGoogleMapsUrlAuto(target, mode);
+        const cacheKey = buildExpandCacheKey(target, mode);
+        const result = await runCachedTask(cacheKey, () => expandGoogleMapsUrlAuto(target, mode));
         sendJson(res, 200, { ok: true, ...result });
       } catch (error) {
         sendJson(res, 400, { ok: false, error: error.message });
@@ -865,6 +996,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 405, { ok: false, error: "Method not allowed" });
         return;
       }
+      if (!enforceRateLimit(req, res)) return;
 
       const query = Converter.normalizeText(requestUrl.searchParams.get("q"));
       if (!query) {
@@ -886,7 +1018,8 @@ const server = http.createServer(async (req, res) => {
           sendJson(res, 400, { ok: false, error: "mode 只支持 auto/browser/auto-headed/headed" });
           return;
         }
-        const result = await geocodeJapaneseAddressWithGoogleBrowser(query, mode);
+        const cacheKey = buildGeocodeCacheKey(query, mode);
+        const result = await runCachedTask(cacheKey, () => geocodeJapaneseAddressWithGoogleBrowser(query, mode));
         sendJson(res, 200, { ok: true, ...result });
       } catch (error) {
         sendJson(res, 502, { ok: false, error: error.message });
