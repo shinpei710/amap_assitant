@@ -283,7 +283,7 @@ async function expandShortUrlIfNeeded(input, analysis) {
 
   const notices = [];
   if (payload.browserAttempted || payload.mode === "browser") {
-    notices.push("下次遇到 Google 地图短链接，可以先在浏览器打开，等它跳成长链接后再复制回来，通常会更快。");
+    notices.push("下次遇到 Google 地图短链接，可以先在浏览器打开，等待地图页面显示完毕后，再将地址栏的完整链接复制回来，通常会更快。");
   }
   if (payload.browserAttempted && payload.browserError) {
     notices.push(`短链接解析失败：${payload.browserError}`);
