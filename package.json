@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Convert Japanese addresses, map links, and coordinates into AMap destination links.",
+  "license": "MIT",
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",

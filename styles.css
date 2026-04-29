@@ -341,14 +341,14 @@ textarea:focus {
   margin-top: 2px;
 }
 
-.examples {
+.input-tools {
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding: 10px 0 2px;
 }
 
-.examples button {
+.input-tools button {
   flex: 0 0 auto;
   min-height: 34px;
   padding: 0 11px;
@@ -359,6 +359,11 @@ textarea:focus {
   font-size: 0.84rem;
   font-weight: 900;
   box-shadow: 0 5px 14px rgba(82, 45, 77, 0.08);
+}
+
+.input-tools [data-clear-input] {
+  border-color: rgba(212, 87, 66, 0.2);
+  color: var(--coral);
 }
 
 .link-actions button,

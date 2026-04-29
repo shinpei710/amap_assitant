@@ -332,6 +332,7 @@
       sourceApplication: src,
       lat: fixedCoord(coords.lat),
       lon: fixedCoord(coords.lng),
+      name: label,
       poiname: label,
       dev: "1"
     })}`;
@@ -343,6 +344,7 @@
       sourceApplication: src,
       lat: fixedCoord(coords.lat),
       lon: fixedCoord(coords.lng),
+      name: label,
       poiname: label,
       dev: "1"
     })}`;

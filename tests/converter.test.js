@@ -62,11 +62,16 @@ test("builds AMap marker URL with WGS84 coordinates", () => {
   assert.match(links.marker, /callnative=1/);
   assert.match(links.appMarkerIos, /^iosamap:\/\/viewMap\?/);
   assert.match(links.appMarkerIos, /lat=35\.6812362/);
+  assert.match(decodeURIComponent(links.appMarkerIos), /name=東京駅/);
+  assert.match(decodeURIComponent(links.appMarkerIos), /poiname=東京駅/);
   assert.match(links.appMarkerAndroid, /^androidamap:\/\/viewMap\?/);
   assert.match(links.appMarkerAndroid, /lon=139\.7671248/);
+  assert.match(decodeURIComponent(links.appMarkerAndroid), /name=東京駅/);
+  assert.match(decodeURIComponent(links.appMarkerAndroid), /poiname=東京駅/);
   assert.match(links.appMarkerAndroid, /dev=1/);
   assert.equal(links.navigation, undefined);
   assert.equal(links.appNavigationAndroid, undefined);
+  assert.equal(links.appSearchAndroid, undefined);
 });
 
 test("does not leak Google URLs into AMap destination names", () => {
@@ -78,6 +83,7 @@ test("does not leak Google URLs into AMap destination names", () => {
   assert.doesNotMatch(decodeURIComponent(links.marker), /google|goo\.gl|maps\.app/i);
   assert.match(decodeURIComponent(links.marker), /目的地/);
   assert.doesNotMatch(decodeURIComponent(links.appMarkerAndroid), /google|goo\.gl|maps\.app/i);
+  assert.match(decodeURIComponent(links.appMarkerAndroid), /name=目的地/);
   assert.match(decodeURIComponent(links.appMarkerAndroid), /poiname=目的地/);
 });
 

@@ -4,6 +4,7 @@ const elements = {
   form: document.querySelector("[data-form]"),
   input: document.querySelector("[data-input]"),
   shortlinkHint: document.querySelector("[data-shortlink-hint]"),
+  clearButton: document.querySelector("[data-clear-input]"),
   convertButton: document.querySelector("[data-convert]"),
   openButton: document.querySelector("[data-convert-open]"),
   status: document.querySelector("[data-status]"),
@@ -138,6 +139,26 @@ function hideManualFallback() {
 function updateShortlinkHint() {
   const analysis = Converter.analyzeInput(elements.input.value);
   elements.shortlinkHint.hidden = !(analysis.url && analysis.isShort);
+}
+
+function clearInput() {
+  elements.input.value = "";
+  state.current = null;
+  elements.resultPanel.hidden = true;
+  elements.resultPanel.classList.remove("is-fresh");
+  elements.candidates.hidden = true;
+  elements.candidates.innerHTML = "";
+  elements.primaryLink.hidden = false;
+  elements.primaryLink.removeAttribute("href");
+  elements.googleLink.hidden = true;
+  elements.googleLink.removeAttribute("href");
+  elements.copyButton.disabled = true;
+  hideManualFallback();
+  setPreview(null);
+  showNotices([]);
+  updateShortlinkHint();
+  setStatus("粘贴日本地址、Google 地图链接或经纬度。");
+  elements.input.focus();
 }
 
 function showNotices(notices) {
@@ -459,14 +480,7 @@ elements.primaryLink.addEventListener("click", (event) => {
 });
 elements.copyButton.addEventListener("click", copyPrimaryLink);
 elements.input.addEventListener("input", updateShortlinkHint);
-
-document.querySelectorAll("[data-example]").forEach((button) => {
-  button.addEventListener("click", () => {
-    elements.input.value = button.dataset.example;
-    updateShortlinkHint();
-    elements.input.focus();
-  });
-});
+elements.clearButton.addEventListener("click", clearInput);
 
 updateShortlinkHint();
 setPreview(null);
