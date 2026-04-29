@@ -1,0 +1,15 @@
+{
+  "name": "amap_assitant",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Convert Japanese addresses, map links, and coordinates into AMap destination links.",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "check": "node --check server.js && node --check converter.js && node --check app.js",
+    "test": "node tests/converter.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

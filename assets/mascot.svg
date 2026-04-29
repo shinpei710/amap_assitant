@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 260" role="img" aria-label="">
+  <defs>
+    <linearGradient id="hair" x1="72" x2="194" y1="38" y2="172" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2d385d"/>
+      <stop offset="0.58" stop-color="#6f5fb8"/>
+      <stop offset="1" stop-color="#f28aa8"/>
+    </linearGradient>
+    <linearGradient id="coat" x1="64" x2="202" y1="128" y2="228" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff8f8"/>
+      <stop offset="1" stop-color="#dff7f1"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#6b4260" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <path fill="#ffe7ee" d="M31 166c0-61 48-111 107-111 53 0 93 40 93 93 0 47-38 86-86 86H65c-19 0-34-15-34-34v-34Z"/>
+  <path fill="#fff7b8" d="M44 68h21l7-21 7 21h21l-17 13 7 21-18-13-18 13 7-21-17-13Z"/>
+  <path fill="#9ee9da" d="M203 39h15v15h-15zM225 61h10v10h-10zM30 117h13v13H30z" transform="rotate(12 203 39)"/>
+  <g filter="url(#softShadow)">
+    <path fill="url(#coat)" stroke="#252a44" stroke-width="5" d="M71 190c5-35 29-57 61-57s57 22 62 57l6 43H65l6-43Z"/>
+    <path fill="#f9bfd0" stroke="#252a44" stroke-width="5" d="M102 138h60v34c0 16-13 29-30 29s-30-13-30-29v-34Z"/>
+    <path fill="#ffe1ea" stroke="#252a44" stroke-width="5" d="M78 97c0-36 24-61 58-61s58 25 58 61v18c0 36-24 62-58 62s-58-26-58-62V97Z"/>
+    <path fill="url(#hair)" stroke="#252a44" stroke-width="5" d="M75 105c0-44 25-75 62-75 39 0 64 31 64 76v19c-14-3-25-13-33-31-10 20-35 32-84 36-6-6-9-14-9-25Z"/>
+    <path fill="#252a44" d="M98 112c0-7 4-12 9-12s9 5 9 12-4 12-9 12-9-5-9-12Zm54 0c0-7 4-12 9-12s9 5 9 12-4 12-9 12-9-5-9-12Z"/>
+    <path fill="none" stroke="#252a44" stroke-linecap="round" stroke-width="5" d="M119 143c9 9 25 9 34 0"/>
+    <path fill="#ff8fb3" d="M88 130c0-6 8-10 16-10s16 4 16 10-8 10-16 10-16-4-16-10Zm64 0c0-6 8-10 16-10s16 4 16 10-8 10-16 10-16-4-16-10Z" opacity=".55"/>
+    <path fill="#fff7b8" stroke="#252a44" stroke-width="5" d="M173 158c0-17 13-30 30-30s30 13 30 30c0 22-30 54-30 54s-30-32-30-54Z"/>
+    <circle cx="203" cy="158" r="12" fill="#55c9be" stroke="#252a44" stroke-width="5"/>
+    <path fill="#fff" stroke="#252a44" stroke-width="5" d="M70 178h37l13 39H83l-13-39Zm84 0h37l-13 39h-37l13-39Z"/>
+  </g>
+</svg>

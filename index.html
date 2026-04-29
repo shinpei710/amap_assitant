@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#fff0f5">
+    <title>amap_assitant</title>
+    <link rel="stylesheet" href="./styles.css?v=2">
+    <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script defer src="./converter.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-copy">
+          <p class="eyebrow">kawaii map relay</p>
+          <h1>amap_assitant</h1>
+          <p class="tagline">日本目的地，一键交给高德。</p>
+        </div>
+        <div class="mascot-frame" aria-hidden="true">
+          <img src="./assets/mascot.svg" alt="">
+        </div>
+        <span class="server-pill" data-server-state>检测服务</span>
+      </header>
+
+      <section class="tool-panel" aria-labelledby="tool-title">
+        <div class="section-heading">
+          <h2 id="tool-title">目的地转换</h2>
+          <p data-status data-tone="neutral">粘贴日本地址或 Google Maps 链接。</p>
+        </div>
+
+        <form data-form>
+          <label class="input-label" for="source-input">目的地</label>
+          <textarea
+            id="source-input"
+            data-input
+            rows="6"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder="例：東京都千代田区丸の内1丁目9-1&#10;或：https://www.google.com/maps/place/.../@35.681236,139.767125,17z"
+          ></textarea>
+
+          <div class="examples" aria-label="示例">
+            <button type="button" data-example="東京都千代田区丸の内1丁目9-1">东京站地址</button>
+            <button type="button" data-example="https://www.google.com/maps/place/Tokyo+Station/@35.6812362,139.7671248,17z">Google 长链接</button>
+            <button type="button" data-example="35.681236,139.767125">经纬度</button>
+          </div>
+
+          <div class="actions">
+            <button class="primary" type="button" data-convert-open>
+              <i data-lucide="send"></i>
+              送去高德
+            </button>
+            <button class="secondary" type="submit" data-convert>
+              <i data-lucide="refresh-cw"></i>
+              先预览
+            </button>
+          </div>
+
+          <div class="busy-panel" data-busy-panel hidden role="status" aria-live="polite">
+            <div class="busy-orbit" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div>
+              <strong data-busy-title>转换中</strong>
+              <p data-busy-text>正在处理。</p>
+              <a data-search-link href="#" target="_blank" rel="noreferrer" hidden>跳转失败？点此手动跳转</a>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="result-panel" data-result hidden aria-live="polite">
+        <div class="result-summary">
+          <div>
+            <h2 data-result-title>结果</h2>
+            <p data-result-meta></p>
+          </div>
+          <a class="primary link-button" data-primary-link href="#" target="_blank" rel="noreferrer">打开高德</a>
+        </div>
+
+        <div class="link-actions">
+          <button type="button" data-copy>
+            <i data-lucide="copy"></i>
+            复制链接
+          </button>
+          <a data-google-link href="#" target="_blank" rel="noreferrer" hidden>
+            <i data-lucide="external-link"></i>
+            原 Google
+          </a>
+        </div>
+
+        <ul class="notices" data-notices hidden></ul>
+      </section>
+
+      <section class="candidate-panel" data-candidates hidden aria-label="候选位置"></section>
+
+      <section class="map-panel" aria-label="地图预览">
+        <div class="preview-empty" data-preview-empty>
+          <i data-lucide="map"></i>
+          <span>拿到坐标后会显示地图预览。</span>
+        </div>
+        <div class="preview-frame" data-preview hidden>
+          <iframe data-preview-frame title="OpenStreetMap preview" loading="lazy"></iframe>
+        </div>
+      </section>
+
+      <footer>
+        高德跳转使用 URI API；详细地址会先解析为坐标再打开高德地点。
+      </footer>
+    </main>
+  </body>
+</html>
