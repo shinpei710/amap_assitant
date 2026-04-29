@@ -3,6 +3,7 @@ const Converter = window.amap_assitantConverter;
 const elements = {
   form: document.querySelector("[data-form]"),
   input: document.querySelector("[data-input]"),
+  shortlinkHint: document.querySelector("[data-shortlink-hint]"),
   convertButton: document.querySelector("[data-convert]"),
   openButton: document.querySelector("[data-convert-open]"),
   status: document.querySelector("[data-status]"),
@@ -134,6 +135,11 @@ function hideManualFallback() {
   elements.searchLink.removeAttribute("href");
 }
 
+function updateShortlinkHint() {
+  const analysis = Converter.analyzeInput(elements.input.value);
+  elements.shortlinkHint.hidden = !(analysis.url && analysis.isShort);
+}
+
 function showNotices(notices) {
   elements.notices.innerHTML = "";
   elements.notices.hidden = !notices.length;
@@ -243,7 +249,7 @@ async function expandShortUrlIfNeeded(input, analysis) {
     };
   }
 
-  setStatus("正在展开短链接。");
+  setStatus("正在排队解析短链接。");
   const response = await fetch(`/api/expand?mode=${encodeURIComponent(BROWSER_MODE)}&url=${encodeURIComponent(analysis.url)}`);
   const payload = await response.json();
   if (!payload.ok || !payload.expandedUrl) {
@@ -255,6 +261,9 @@ async function expandShortUrlIfNeeded(input, analysis) {
   }
 
   const notices = [];
+  if (payload.browserAttempted || payload.mode === "browser") {
+    notices.push("下次遇到 Google 地图短链接，可以先在浏览器打开，等它跳成长链接后再复制回来，通常会更快。");
+  }
   if (payload.browserAttempted && payload.browserError) {
     notices.push(`短链接解析失败：${payload.browserError}`);
   } else if (payload.browserAttempted) {
@@ -449,14 +458,17 @@ elements.primaryLink.addEventListener("click", (event) => {
   openWithAppFallback(state.current);
 });
 elements.copyButton.addEventListener("click", copyPrimaryLink);
+elements.input.addEventListener("input", updateShortlinkHint);
 
 document.querySelectorAll("[data-example]").forEach((button) => {
   button.addEventListener("click", () => {
     elements.input.value = button.dataset.example;
+    updateShortlinkHint();
     elements.input.focus();
   });
 });
 
+updateShortlinkHint();
 setPreview(null);
 checkServerState();
 

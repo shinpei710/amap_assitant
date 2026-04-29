@@ -308,6 +308,39 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(239, 111, 159, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
+.shortlink-hint {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(32, 184, 170, 0.24);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f3fffd, #fffafd);
+  color: #43615f;
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.shortlink-hint[hidden] {
+  display: none;
+}
+
+.shortlink-hint strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #0d8178;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.shortlink-hint p {
+  margin: 0;
+}
+
+.shortlink-hint p + p {
+  margin-top: 2px;
+}
+
 .examples {
   display: flex;
   gap: 8px;
