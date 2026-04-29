@@ -239,7 +239,7 @@ async function expandShortUrlIfNeeded(input, analysis) {
     return {
       input,
       expandedUrl: "",
-      notice: "当前不是通过本地服务打开，无法自动展开地图短链接。"
+      notice: "当前不是通过本地服务打开，无法自动展开 Google 地图短链接。"
     };
   }
 
@@ -258,7 +258,7 @@ async function expandShortUrlIfNeeded(input, analysis) {
   if (payload.browserAttempted && payload.browserError) {
     notices.push(`短链接解析失败：${payload.browserError}`);
   } else if (payload.browserAttempted) {
-    notices.push("已尝试解析，但最终链接里仍没有坐标。");
+    notices.push("已尝试解析，但最终 Google 地图链接里仍没有坐标。");
   }
 
   return {
@@ -301,7 +301,7 @@ function resultFromCoords({ analysis, coords, name, title, meta, sourceGoogleUrl
 async function convert({ openAfter = false } = {}) {
   const rawInput = elements.input.value;
   if (!Converter.normalizeText(rawInput)) {
-    setStatus("先粘贴一个日本地址、地图链接或经纬度。", "warn");
+    setStatus("先粘贴一个日本地址、Google 地图链接或经纬度。", "warn");
     elements.input.focus();
     return;
   }
@@ -346,15 +346,15 @@ async function convert({ openAfter = false } = {}) {
     if (analysis.kind === "google-url") {
       const sourceGoogleUrl = analysis.url || expanded.expandedUrl || "";
       setFailureResult({
-        title: "地图链接没有坐标",
+        title: "Google 地图链接没有坐标",
         meta: "短链接已展开，但最终链接里没有可提取的经纬度。",
         sourceGoogleUrl,
         notices: [
           ...notices,
-          "这个工具不会用地点名做猜测转换；请换成带坐标的地图链接，或直接粘贴经纬度。"
+          "这个工具不会用地点名做猜测转换；请换成带坐标的 Google 地图链接，或直接粘贴经纬度。"
         ]
       });
-      setStatus("转换失败：地图链接里没有坐标。", "warn");
+      setStatus("转换失败：Google 地图链接里没有坐标。", "warn");
       return;
     }
 
@@ -362,7 +362,7 @@ async function convert({ openAfter = false } = {}) {
     if (!Converter.isLikelyDetailedJapaneseAddress(query)) {
       setFailureResult({
         title: "没有可靠转换依据",
-        meta: "请输入日本详细地址、带坐标的地图链接，或直接粘贴经纬度。",
+        meta: "请输入日本详细地址、带坐标的 Google 地图链接，或直接粘贴经纬度。",
         sourceGoogleUrl: "",
         notices: [
           ...notices,
@@ -414,7 +414,7 @@ async function convert({ openAfter = false } = {}) {
       sourceGoogleUrl: "",
       notices: [
         ...notices,
-        "可以换成更完整的日文地址、带坐标的地图链接，或直接粘贴经纬度。"
+        "可以换成更完整的日文地址、带坐标的 Google 地图链接，或直接粘贴经纬度。"
       ]
     });
     setStatus("转换失败：没有可靠坐标。", "warn");
